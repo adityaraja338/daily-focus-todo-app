@@ -23,6 +23,14 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (error.response?.status === 401) {
+      // Clear auth token
+      localStorage.removeItem('authToken');
+      // Redirect to login page
+      window.location.href = '/';
+      return Promise.reject(new Error('Session expired. Please login again.'));
+    }
+
     const errorMessage = error.response?.data?.message || 'An error occurred';
     const customError = new Error(errorMessage);
     (customError as any).status = error.response?.status;

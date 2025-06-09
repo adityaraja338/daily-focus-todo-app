@@ -23,13 +23,13 @@ export const LoginForm = ({ onLoginSuccess, onSwitchToRegister }: LoginFormProps
     setIsLoading(true);
 
     try {
-      const response = await loginUser({ email, password });
-      if (response.token) {
+      const response: any = await loginUser({ email, password });
+      if (response.data?.token) {
         toast({
           title: "Login Successful",
           description: "Welcome back!",
         });
-        onLoginSuccess(response.token);
+        onLoginSuccess(response.data.token);
       }
     } catch (error: any) {
       toast({
