@@ -1,11 +1,10 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { updateTask, deleteTask } from '@/utils/api';
 import { List, Trash2 } from 'lucide-react';
+import { useUpdateTask, useDeleteTask } from '@/hooks/use-tasks';
 
 interface Task {
   _id: string;
@@ -17,23 +16,24 @@ interface Task {
 
 interface TaskListProps {
   tasks: Task[];
-  setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
   isLoading: boolean;
   onAuthError: () => void;
 }
 
-export const TaskList = ({ tasks, setTasks, isLoading, onAuthError }: TaskListProps) => {
+export const TaskList = ({ tasks, isLoading, onAuthError }: TaskListProps) => {
   const [updatingTasks, setUpdatingTasks] = useState<Set<string>>(new Set());
   const { toast } = useToast();
+  const updateTaskMutation = useUpdateTask();
+  const deleteTaskMutation = useDeleteTask();
 
   const handleToggleComplete = async (taskId: string, completed: boolean) => {
     setUpdatingTasks(prev => new Set(prev).add(taskId));
     
     try {
-      await updateTask(taskId, { completed: !completed });
-      setTasks(prev => prev.map(task => 
-        task._id === taskId ? { ...task, completed: !completed } : task
-      ));
+      await updateTaskMutation.mutateAsync({
+        taskId,
+        updateData: { completed: !completed }
+      });
     } catch (error: any) {
       if (error.status === 401) {
         onAuthError();
@@ -57,8 +57,7 @@ export const TaskList = ({ tasks, setTasks, isLoading, onAuthError }: TaskListPr
     setUpdatingTasks(prev => new Set(prev).add(taskId));
     
     try {
-      await deleteTask(taskId);
-      setTasks(prev => prev.filter(task => task._id !== taskId));
+      await deleteTaskMutation.mutateAsync(taskId);
       toast({
         title: "Task Deleted",
         description: "The task has been removed successfully",

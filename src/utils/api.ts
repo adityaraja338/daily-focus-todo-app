@@ -1,108 +1,102 @@
+import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:3000/api'; // Update this to your backend URL
 
-interface RegisterData {
+// Create axios instance with default config
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Add request interceptor to add auth token
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('authToken');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Add response interceptor for error handling
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const errorMessage = error.response?.data?.message || 'An error occurred';
+    const customError = new Error(errorMessage);
+    (customError as any).status = error.response?.status;
+    return Promise.reject(customError);
+  }
+);
+
+export interface RegisterData {
   name: string;
   email: string;
   password: string;
 }
 
-interface LoginData {
+export interface LoginData {
   email: string;
   password: string;
 }
 
-interface TaskData {
+export interface TaskData {
   title: string;
   description?: string;
 }
 
-interface UpdateTaskData {
+export interface UpdateTaskData {
   title?: string;
   description?: string;
   completed?: boolean;
 }
 
-// Helper function to get auth headers
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('authToken');
-  return {
-    'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` }),
-  };
-};
+export interface GetTasksParams {
+  page?: number;
+  limit?: number;
+}
 
-// Helper function to handle API responses
-const handleResponse = async (response: Response) => {
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ message: 'An error occurred' }));
-    const error = new Error(errorData.message || 'An error occurred');
-    (error as any).status = response.status;
-    throw error;
-  }
-  return response.json();
-};
+interface TasksResponse {
+  tasks: Array<{
+    _id: string;
+    title: string;
+    description?: string;
+    completed: boolean;
+    createdAt: string;
+  }>;
+  currentPage: number;
+  totalPages: number;
+  totalTasks: number;
+}
 
 // Authentication APIs
 export const registerUser = async (userData: RegisterData) => {
-  const response = await fetch(`${API_BASE_URL}/auth/register`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(userData),
-  });
-  
-  return handleResponse(response);
+  return api.post('/auth/register', userData);
 };
 
 export const loginUser = async (loginData: LoginData) => {
-  const response = await fetch(`${API_BASE_URL}/auth/login`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(loginData),
-  });
-  
-  return handleResponse(response);
+  return api.post('/auth/login', loginData);
 };
 
 // Task APIs
-export const getTasks = async () => {
-  const response = await fetch(`${API_BASE_URL}/tasks`, {
-    method: 'GET',
-    headers: getAuthHeaders(),
-  });
-  
-  return handleResponse(response);
+export const getTasks = async (params: GetTasksParams = {}): Promise<TasksResponse> => {
+  const { page = 1, limit = 10 } = params;
+  const response = await api.get<TasksResponse>('/tasks', { params: { page, limit } });
+  return response.data;
 };
 
 export const createTask = async (taskData: TaskData) => {
-  const response = await fetch(`${API_BASE_URL}/tasks`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(taskData),
-  });
-  
-  return handleResponse(response);
+  return api.post('/tasks', taskData);
 };
 
 export const updateTask = async (taskId: string, updateData: UpdateTaskData) => {
-  const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
-    method: 'PUT',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(updateData),
-  });
-  
-  return handleResponse(response);
+  return api.patch(`/tasks/${taskId}`, updateData);
 };
 
 export const deleteTask = async (taskId: string) => {
-  const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
-    method: 'DELETE',
-    headers: getAuthHeaders(),
-  });
-  
-  return handleResponse(response);
+  return api.delete(`/tasks/${taskId}`);
 };
+
+// Export the api instance for direct use if needed
+export { api };

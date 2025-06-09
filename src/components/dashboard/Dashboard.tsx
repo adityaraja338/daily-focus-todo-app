@@ -1,74 +1,36 @@
-
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { TaskList } from './TaskList';
-import { createTask, getTasks } from '@/utils/api';
 import { LogOut, Plus } from 'lucide-react';
-
-interface Task {
-  _id: string;
-  title: string;
-  description?: string;
-  completed: boolean;
-  createdAt: string;
-}
+import { useTasks, useCreateTask } from '@/hooks/use-tasks';
 
 interface DashboardProps {
   onLogout: () => void;
 }
 
 export const Dashboard = ({ onLogout }: DashboardProps) => {
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDescription, setNewTaskDescription] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    loadTasks();
-  }, []);
-
-  const loadTasks = async () => {
-    setIsLoading(true);
-    try {
-      const tasksData = await getTasks();
-      setTasks(tasksData);
-    } catch (error: any) {
-      if (error.status === 401) {
-        toast({
-          title: "Session Expired",
-          description: "Please log in again",
-          variant: "destructive",
-        });
-        onLogout();
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to load tasks",
-          variant: "destructive",
-        });
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Use React Query hooks
+  const { data: tasksData, isLoading } = useTasks(currentPage);
+  const createTaskMutation = useCreateTask();
 
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTaskTitle.trim()) return;
 
-    setIsCreating(true);
     try {
-      const newTask = await createTask({
+      await createTaskMutation.mutateAsync({
         title: newTaskTitle,
         description: newTaskDescription,
       });
       
-      setTasks(prev => [newTask, ...prev]);
       setNewTaskTitle('');
       setNewTaskDescription('');
       
@@ -91,8 +53,12 @@ export const Dashboard = ({ onLogout }: DashboardProps) => {
           variant: "destructive",
         });
       }
-    } finally {
-      setIsCreating(false);
+    }
+  };
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= (tasksData?.totalPages || 1)) {
+      setCurrentPage(newPage);
     }
   };
 
@@ -144,9 +110,9 @@ export const Dashboard = ({ onLogout }: DashboardProps) => {
               <Button 
                 type="submit" 
                 className="w-full h-11 bg-blue-600 hover:bg-blue-700"
-                disabled={isCreating}
+                disabled={createTaskMutation.isPending}
               >
-                {isCreating ? 'Adding Task...' : 'Add Task'}
+                {createTaskMutation.isPending ? 'Adding Task...' : 'Add Task'}
               </Button>
             </form>
           </CardContent>
@@ -154,11 +120,35 @@ export const Dashboard = ({ onLogout }: DashboardProps) => {
 
         {/* Task List */}
         <TaskList 
-          tasks={tasks} 
-          setTasks={setTasks}
+          tasks={tasksData?.tasks || []} 
           isLoading={isLoading}
           onAuthError={onLogout}
         />
+
+        {/* Pagination */}
+        {tasksData?.totalPages > 1 && (
+          <div className="flex justify-center items-center gap-2 mt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </Button>
+            <span className="text-sm text-gray-600">
+              Page {currentPage} of {tasksData.totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === tasksData.totalPages}
+            >
+              Next
+            </Button>
+          </div>
+        )}
       </main>
     </div>
   );
