@@ -2,10 +2,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { Dashboard } from '@/components/dashboard/Dashboard';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -17,26 +18,41 @@ const queryClient = new QueryClient({
   },
 });
 
-const App = () => {
-  const handleLogout = () => {
-    localStorage.removeItem('authToken');
-    window.location.href = '/login';
-  };
+// Protected Route component
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated } = useAuth();
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
 
+  return <>{children}</>;
+};
+
+const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/dashboard" element={<Dashboard onLogout={handleLogout} />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+      <BrowserRouter>
+        <AuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route 
+                path="/dashboard" 
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } 
+              />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </TooltipProvider>
+        </AuthProvider>
+      </BrowserRouter>
     </QueryClientProvider>
   );
 };

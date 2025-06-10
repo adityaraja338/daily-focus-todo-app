@@ -1,39 +1,37 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { registerUser } from '@/utils/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface RegisterFormProps {
-  onRegisterSuccess: () => void;
   onSwitchToLogin: () => void;
 }
 
-export const RegisterForm = ({ onRegisterSuccess, onSwitchToLogin }: RegisterFormProps) => {
+export const RegisterForm = ({ onSwitchToLogin }: RegisterFormProps) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { register } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      await registerUser({ name, email, password });
+      await register(name, email, password);
       toast({
         title: "Registration Successful",
-        description: "Your account has been created. Please sign in.",
+        description: "Welcome to Daily Focus!",
       });
-      onRegisterSuccess();
     } catch (error: any) {
       toast({
         title: "Registration Failed",
-        description: error.message || "Something went wrong",
+        description: error.message || "Failed to create account",
         variant: "destructive",
       });
     } finally {
@@ -52,11 +50,11 @@ export const RegisterForm = ({ onRegisterSuccess, onSwitchToLogin }: RegisterFor
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Full Name</Label>
+            <Label htmlFor="name">Name</Label>
             <Input
               id="name"
               type="text"
-              placeholder="Enter your full name"
+              placeholder="Enter your name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required

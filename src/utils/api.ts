@@ -1,18 +1,18 @@
 import axios from 'axios';
+import Cookies from 'js-cookie';
 
-const API_BASE_URL = 'http://localhost:3000/api'; // Update this to your backend URL
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
-// Create axios instance with default config
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Add request interceptor to add auth token
+// Add a request interceptor to add the auth token to requests
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('authToken');
+  const token = Cookies.get('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -24,8 +24,9 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Clear auth token
-      localStorage.removeItem('authToken');
+      // Clear auth data
+      Cookies.remove('token');
+      Cookies.remove('user');
       // Redirect to login page
       window.location.href = '/';
       return Promise.reject(new Error('Session expired. Please login again.'));
@@ -49,62 +50,81 @@ export interface LoginData {
   password: string;
 }
 
-export interface TaskData {
+export interface User {
+  _id: string;
+  name: string;
+  email: string;
+}
+
+export interface Task {
+  _id: string;
+  title: string;
+  description: string;
+  completed: boolean;
+  createdAt: string;
+}
+
+export interface CreateTaskData {
   title: string;
   description?: string;
 }
 
-export interface UpdateTaskData {
-  title?: string;
-  description?: string;
-  completed?: boolean;
-}
-
-export interface GetTasksParams {
-  page?: number;
-  limit?: number;
-}
-
-interface TasksResponse {
-  tasks: Array<{
-    _id: string;
-    title: string;
-    description?: string;
-    completed: boolean;
-    createdAt: string;
-  }>;
+export interface TasksResponse {
+  tasks: Task[];
   currentPage: number;
   totalPages: number;
   totalTasks: number;
 }
 
-// Authentication APIs
-export const registerUser = async (userData: RegisterData) => {
-  return api.post('/auth/register', userData);
+interface AuthResponse {
+  token: string;
+  user: User;
+}
+
+export const authService = {
+  register: async (data: RegisterData): Promise<AuthResponse> => {
+    const response = await api.post<AuthResponse>('/auth/register', data);
+    const { token, user } = response.data;
+    Cookies.set('token', token, { expires: 7 }); // Expires in 7 days
+    Cookies.set('user', JSON.stringify(user), { expires: 7 });
+    return response.data;
+  },
+  login: async (data: LoginData): Promise<AuthResponse> => {
+    const response = await api.post<AuthResponse>('/auth/login', data);
+    const { token, user } = response.data;
+    Cookies.set('token', token, { expires: 7 }); // Expires in 7 days
+    Cookies.set('user', JSON.stringify(user), { expires: 7 });
+    return response.data;
+  },
+  logout: () => {
+    Cookies.remove('token');
+    Cookies.remove('user');
+  },
+  getCurrentUser: (): User | null => {
+    const userStr = Cookies.get('user');
+    return userStr ? JSON.parse(userStr) : null;
+  },
+  isAuthenticated: (): boolean => {
+    return !!Cookies.get('token');
+  },
 };
 
-export const loginUser = async (loginData: LoginData) => {
-  return api.post('/auth/login', loginData);
+export const taskService = {
+  getTasks: async (page: number = 1, limit: number = 10, search?: string): Promise<TasksResponse> => {
+    const response = await api.get<TasksResponse>('/tasks', {
+      params: { page, limit, search },
+    });
+    return response.data;
+  },
+  createTask: async (data: CreateTaskData): Promise<Task> => {
+    const response = await api.post<Task>('/tasks', data);
+    return response.data;
+  },
+  updateTask: async (id: string, data: Partial<Task>): Promise<Task> => {
+    const response = await api.patch<Task>(`/tasks/${id}`, data);
+    return response.data;
+  },
+  deleteTask: async (id: string): Promise<void> => {
+    await api.delete(`/tasks/${id}`);
+  },
 };
-
-// Task APIs
-export const getTasks = async (params: GetTasksParams = {}): Promise<TasksResponse> => {
-  const { page = 1, limit = 10 } = params;
-  const response = await api.get<TasksResponse>('/tasks', { params: { page, limit } });
-  return response.data;
-};
-
-export const createTask = async (taskData: TaskData) => {
-  return api.post('/tasks', taskData);
-};
-
-export const updateTask = async (taskId: string, updateData: UpdateTaskData) => {
-  return api.patch(`/tasks/${taskId}`, updateData);
-};
-
-export const deleteTask = async (taskId: string) => {
-  return api.delete(`/tasks/${taskId}`);
-};
-
-// Export the api instance for direct use if needed
-export { api };

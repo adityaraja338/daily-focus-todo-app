@@ -4,21 +4,22 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { TaskList } from './TaskList';
-import { LogOut, Plus } from 'lucide-react';
+import { LogOut, Plus, Search } from 'lucide-react';
 import { useTasks, useCreateTask } from '@/hooks/use-tasks';
+import { useAuth } from '@/contexts/AuthContext';
+import { useDebounce } from '@/hooks/use-debounce';
 
-interface DashboardProps {
-  onLogout: () => void;
-}
-
-export const Dashboard = ({ onLogout }: DashboardProps) => {
+export const Dashboard = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDescription, setNewTaskDescription] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearch = useDebounce(searchQuery, 500);
   const { toast } = useToast();
-
+  const { logout, user } = useAuth();
+  
   // Use React Query hooks
-  const { data: tasksData, isLoading } = useTasks(currentPage);
+  const { data: tasksData, isLoading } = useTasks(currentPage, 10, debouncedSearch);
   const createTaskMutation = useCreateTask();
 
   const handleCreateTask = async (e: React.FormEvent) => {
@@ -45,7 +46,7 @@ export const Dashboard = ({ onLogout }: DashboardProps) => {
           description: "Please log in again",
           variant: "destructive",
         });
-        onLogout();
+        logout();
       } else {
         toast({
           title: "Error",
@@ -67,15 +68,18 @@ export const Dashboard = ({ onLogout }: DashboardProps) => {
       <header className="bg-white/80 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-900">My Tasks</h1>
-          <Button
-            onClick={onLogout}
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-2"
-          >
-            <LogOut className="h-4 w-4" />
-            Logout
-          </Button>
+          <div className="flex items-center space-x-4">
+            <p className="text-sm text-gray-600">Hello, {user?.name}</p>
+            <Button
+              onClick={logout}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              Logout
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -118,15 +122,27 @@ export const Dashboard = ({ onLogout }: DashboardProps) => {
           </CardContent>
         </Card>
 
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Search tasks..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 h-11 bg-white/90 backdrop-blur-sm"
+          />
+        </div>
+
         {/* Task List */}
         <TaskList 
           tasks={tasksData?.tasks || []} 
+          totalPages={tasksData?.totalPages || 1}
           isLoading={isLoading}
-          onAuthError={onLogout}
+          onAuthError={logout}
         />
 
         {/* Pagination */}
-        {tasksData?.totalPages > 1 && (
+        {tasksData && (
           <div className="flex justify-center items-center gap-2 mt-4">
             <Button
               variant="outline"

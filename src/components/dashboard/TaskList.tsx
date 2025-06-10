@@ -16,11 +16,12 @@ interface Task {
 
 interface TaskListProps {
   tasks: Task[];
+  totalPages: number;
   isLoading: boolean;
   onAuthError: () => void;
 }
 
-export const TaskList = ({ tasks, isLoading, onAuthError }: TaskListProps) => {
+export const TaskList = ({ tasks, totalPages, isLoading, onAuthError }: TaskListProps) => {
   const [updatingTasks, setUpdatingTasks] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const updateTaskMutation = useUpdateTask();

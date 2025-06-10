@@ -1,24 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getTasks, createTask, updateTask, deleteTask } from '@/utils/api';
-import type { TaskData, UpdateTaskData } from '@/utils/api';
+import { taskService, Task, CreateTaskData } from '@/utils/api';
 
 interface TasksResponse {
-  tasks: Array<{
-    _id: string;
-    title: string;
-    description?: string;
-    completed: boolean;
-    createdAt: string;
-  }>;
+  tasks: Task[];
   currentPage: number;
   totalPages: number;
   totalTasks: number;
 }
 
-export const useTasks = (page: number = 1, limit: number = 10) => {
+export const useTasks = (page: number = 1, limit: number = 10, search?: string) => {
   return useQuery<TasksResponse>({
-    queryKey: ['tasks', page, limit],
-    queryFn: () => getTasks({ page, limit }),
+    queryKey: ['tasks', page, limit, search],
+    queryFn: () => taskService.getTasks(page, limit, search),
   });
 };
 
@@ -26,7 +19,7 @@ export const useCreateTask = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (taskData: TaskData) => createTask(taskData),
+    mutationFn: (taskData: CreateTaskData) => taskService.createTask(taskData),
     onSuccess: () => {
       // Invalidate and refetch tasks
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
@@ -38,8 +31,8 @@ export const useUpdateTask = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ taskId, updateData }: { taskId: string; updateData: UpdateTaskData }) =>
-      updateTask(taskId, updateData),
+    mutationFn: ({ taskId, updateData }: { taskId: string; updateData: Partial<Task> }) =>
+      taskService.updateTask(taskId, updateData),
     onSuccess: () => {
       // Invalidate and refetch tasks
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
@@ -51,7 +44,7 @@ export const useDeleteTask = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (taskId: string) => deleteTask(taskId),
+    mutationFn: (taskId: string) => taskService.deleteTask(taskId),
     onSuccess: () => {
       // Invalidate and refetch tasks
       queryClient.invalidateQueries({ queryKey: ['tasks'] });

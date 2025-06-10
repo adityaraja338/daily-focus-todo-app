@@ -1,36 +1,32 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { loginUser } from '@/utils/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface LoginFormProps {
-  onLoginSuccess: (token: string) => void;
   onSwitchToRegister: () => void;
 }
 
-export const LoginForm = ({ onLoginSuccess, onSwitchToRegister }: LoginFormProps) => {
+export const LoginForm = ({ onSwitchToRegister }: LoginFormProps) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      const response: any = await loginUser({ email, password });
-      if (response.data?.token) {
-        toast({
-          title: "Login Successful",
-          description: "Welcome back!",
-        });
-        onLoginSuccess(response.data.token);
-      }
+      await login(email, password);
+      toast({
+        title: "Login Successful",
+        description: "Welcome back!",
+      });
     } catch (error: any) {
       toast({
         title: "Login Failed",
