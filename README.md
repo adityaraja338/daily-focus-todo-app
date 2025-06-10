@@ -4,22 +4,28 @@ A modern task management application built with React and TypeScript.
 
 ## Features
 
-- Task management with pagination
-- Real-time data updates
-- Optimistic UI updates
+- User authentication with secure cookie-based sessions
+- Task management with pagination and search
+- Real-time data updates with React Query
+- Optimistic UI updates for better user experience
 - Automatic background refetching
 - Error handling and retry logic
 - Type-safe API calls
+- Debounced search functionality
+- Protected routes
+- Responsive and modern UI with shadcn-ui
 
 ## Technologies Used
 
 - Vite
 - TypeScript
 - React
-- shadcn-ui
-- Tailwind CSS
+- React Router for navigation
+- shadcn-ui for UI components
+- Tailwind CSS for styling
 - React Query (TanStack Query) for data fetching and state management
 - Axios for HTTP requests
+- js-cookie for secure cookie management
 
 ## Getting Started
 
@@ -40,6 +46,9 @@ cd daily-focus-todo-app
 # Install dependencies
 npm install
 
+# Create a .env file in the root directory and add:
+VITE_API_URL=http://localhost:3000/api
+
 # Start the development server
 npm run dev
 ```
@@ -59,11 +68,39 @@ The application will be available at `http://localhost:8080`
 ```
 src/
   ├── components/     # React components
+  │   ├── auth/      # Authentication components
+  │   ├── dashboard/ # Dashboard components
+  │   └── ui/        # UI components
+  ├── contexts/      # React contexts
   ├── hooks/         # Custom React hooks
   ├── utils/         # Utility functions and API calls
   ├── types/         # TypeScript type definitions
   └── App.tsx        # Root component
 ```
+
+## Features in Detail
+
+### Authentication
+- Secure cookie-based authentication
+- Protected routes
+- Automatic session handling
+- Login and registration forms
+- Session expiration handling
+
+### Task Management
+- Create, read, update, and delete tasks
+- Pagination support
+- Search functionality with debouncing
+- Optimistic updates for better UX
+- Error handling and retry logic
+- Real-time data synchronization
+
+### UI/UX
+- Modern and responsive design
+- Loading states and error messages
+- Toast notifications for user feedback
+- Smooth transitions and animations
+- Mobile-friendly interface
 
 ## Contributing
 
